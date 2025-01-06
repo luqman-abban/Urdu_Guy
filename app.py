@@ -7,6 +7,7 @@ import numpy as np
 import wave
 from datasets import load_dataset, Audio, config
 from IPython.display import Audio
+import streamlit as st
 
 # Load the TTS model from the Hugging Face Hub
 checkpoint = "TheUpperCaseGuy/Guy-Urdu-TTS"  # Replace with your actual model name
@@ -15,12 +16,12 @@ model = SpeechT5ForTextToSpeech.from_pretrained(checkpoint)
 tokenizer = processor.tokenizer
 vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
-
 # Buckwalter to Unicode mapping
 buck2uni = {
             u"\u0627":"A",
             u"\u0627":"A",
             u"\u0675":"A",
+
             u"\u0673":"A",
             u"\u0630":"A",
             u"\u0622":"AA",
@@ -29,6 +30,7 @@ buck2uni = {
             u"\u062A":"T",
             u"\u0637":"T",
             u"\u0679":"T",
+
             u"\u062C":"J",
             u"\u0633":"S",
             u"\u062B":"S",
@@ -37,6 +39,7 @@ buck2uni = {
             u"\u062D":"H",
             u"\u0647":"H",
             u"\u0629":"H",
+
             u"\u06DF":"H",
             u"\u062E":"KH",
             u"\u062F":"D",
@@ -46,6 +49,7 @@ buck2uni = {
             u"\u0636":"Z",
             u"\u0638":"Z",
             u"\u068E":"Z",
+
             u"\u0631":"R",
             u"\u0691":"R",
             u"\u0634":"SH",
@@ -54,6 +58,7 @@ buck2uni = {
             u"\u06A9":"K",
             u"\u0642":"K",
             u"\u06AF":"G",
+
             u"\u0644":"L",
             u"\u0645":"M",
             u"\u0646":"N",
@@ -62,6 +67,7 @@ buck2uni = {
             u"\u0649":"Y",
             u"\u0626":"Y",
             u"\u06CC":"Y",
+
             u"\u06D2":"E",
             u"\u06C1":"H",
             u"\u064A":"E"  ,
@@ -70,12 +76,14 @@ buck2uni = {
             u"\u0639":"A"  ,
             u"\u0643":"K" ,
             u"\u0621":"A",
+
             u"\u0624":"O",
             u"\u060C":"" #seperator ulta comma
 }
 
 def transString(string, reverse=0):
-    """Given a Unicode string, transliterate into Buckwalter. To go from
+    """Given a Unicode string, transliterate into Buckwalter.
+    To go from
     Buckwalter back to Unicode, set reverse=1"""
     for k, v in buck2uni.items():
         if not reverse:
@@ -84,13 +92,13 @@ def transString(string, reverse=0):
             string = string.replace(v, k)
     return string
 
-
 def generate_audio(text):
     # Convert input text to Roman Urdu
     roman_urdu = transString(text)
 
     # Tokenize the input text
-    inputs = processor(text=roman_urdu, return_tensors="pt", type = "numpy")
+
+    inputs = processor(text=roman_urdu, return_tensors="pt")
 
     # Generate audio from the SpeechT5 model
     speaker_embeddings = torch.tensor(np.load("speaker_embeddings.npy"))
@@ -107,13 +115,19 @@ def text_to_speech(text):
 
     return output_path
 
-
 examples = [
     ['میں ٹھیک ہوں، شکریہ! اور آپ؟'],
     ['آپ سَے ملکر خوشی ہوًی!'],
 ]
 
+# Streamlit app
+st.title("Urdu TTS")
+st.write("A simple Urdu Text to Speech Application.")
 
-interface = gr.Interface(fn=text_to_speech, inputs="text", outputs="audio", verbose = True, title="Urdu TTS", 
-                         description = "A simple Urdu Text to Speech Application. It is not by any means perfect and will not work for all text. You can sometimes expect it to generate random noise on an input of your choice. Right now it works successfully on very basic urdu text, such the ones in the example.", examples = examples)
-interface.launch()
+text_input = st.text_input("Enter Urdu text:")
+if st.button("Generate Audio"):
+    if text_input:
+        audio_file = text_to_speech(text_input)
+        st.audio(audio_file, format="audio/wav")
+    else:
+        st.warning("Please enter some text.")
